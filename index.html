@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Flashcards Matemáticas - Álgebra Lineal</title>
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <!-- KaTeX JS -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <!-- Auto-render extension -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #F5A623;
+            --background-color: #F8F9FA;
+            --text-color: #333;
+            --card-background: #FFFFFF;
+            --timer-color: #E74C3C;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-screen {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: var(--card-background);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .flashcard-container {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .timer {
+            font-size: 24px;
+            color: var(--timer-color);
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .flashcard {
+            perspective: 1000px;
+            width: 100%;
+            height: 400px;
+            position: relative;
+            cursor: not-allowed;
+            margin-bottom: 20px;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: var(--card-background);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            opacity: 0.6;
+        }
+
+        button.active {
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        button:hover.active {
+            background-color: #357ABD;
+        }
+
+        .progress {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .motivation {
+            margin-top: 20px;
+            color: var(--secondary-color);
+            font-style: italic;
+            text-align: center;
+        }
+
+        .latex-content {
+            margin: 15px 0;
+            font-size: 1.2em;
+            text-align: left;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .flashcard {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-screen" id="welcomeScreen">
+        <h1>¡Bienvenido! 🌟</h1>
+        <p>Hola. Vamos a repasar conceptos clave de Álgebra Lineal para reforzar tus conocimientos.</p>
+        <p>Tienes 15 segundos para pensar en cada concepto antes de ver la explicación.</p>
+        <button onclick="startFlashcards()">¡Iniciar Flashcards!</button>
+    </div>
+
+    <div class="flashcard-container" id="flashcardContainer">
+        <div class="timer" id="timer">15</div>
+        <div class="flashcard" id="flashcard">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <!-- Contenido dinámico -->
+                </div>
+                <div class="flashcard-back">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+        <div class="navigation">
+            <button onclick="previousCard()" id="prevButton" disabled>Anterior</button>
+            <button onclick="nextCard()" id="nextButton" disabled>Siguiente</button>
+        </div>
+        <div class="progress">
+            <span id="progressText">Tarjeta 1 de 25</span>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        <div class="motivation" id="motivation"></div>
+    </div>
+
+    <script>
+        const flashcards = [
+            {
+                front: {
+                    title: "Vector",
+                    content: "¿Qué es un vector en \\( \\mathbb{R}^n \\)?"
+                },
+                back: {
+                    explanation: "Un vector en \\( \\mathbb{R}^n \\) es una entidad matemática con magnitud y dirección, representada como una lista ordenada de \(n\) componentes.",
+                    math: [
+                        "\\( \\mathbf{v} = \\begin{pmatrix} v_1 \\\\ v_2 \\\\ \\vdots \\\\ v_n \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Matriz",
+                    content: "¿Qué es una matriz?"
+                },
+                back: {
+                    explanation: "Una matriz es una disposición rectangular de números en filas y columnas, utilizada para representar transformaciones lineales o sistemas de ecuaciones.",
+                    math: [
+                        "\\( A = \\begin{pmatrix} a_{11} & a_{12} \\\\ a_{21} & a_{22} \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Base",
+                    content: "¿Qué es una base en \\( \\mathbb{R}^n \\)?"
+                },
+                back: {
+                    explanation: "Una base en \\( \\mathbb{R}^n \\) es un conjunto de \(n\) vectores linealmente independientes que generan todo el espacio vectorial.",
+                    math: [
+                        "\\( \\mathbf{e}_1 = \\begin{pmatrix} 1 \\\\ 0 \\\\ \\vdots \\\\ 0 \\end{pmatrix}, \\mathbf{e}_2 = \\begin{pmatrix} 0 \\\\ 1 \\\\ \\vdots \\\\ 0 \\end{pmatrix}, \\dots, \\mathbf{e}_n = \\begin{pmatrix} 0 \\\\ 0 \\\\ \\vdots \\\\ 1 \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Base Ortonormal",
+                    content: "¿Qué es una base ortonormal?"
+                },
+                back: {
+                    explanation: "Una base ortonormal es un conjunto de vectores que son mutuamente ortogonales (perpendiculares) y cada uno tiene norma uno.",
+                    math: [
+                        "\\( \\langle \\mathbf{u}_i, \\mathbf{u}_j \\rangle = \\delta_{ij} \\)",
+                        "Donde \\( \\delta_{ij} = \\begin{cases} 1 & \\text{si } i=j, \\\\ 0 & \\text{si } i \\neq j. \\end{cases} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Vectores Ortogonales",
+                    content: "¿Qué significa que dos vectores sean ortogonales?"
+                },
+                back: {
+                    explanation: "Dos vectores son ortogonales si su producto interno es cero.",
+                    math: [
+                        "\\( \\langle \\mathbf{u}, \\mathbf{v} \\rangle = 0 \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Vectores Ortonormales",
+                    content: "¿Qué es un conjunto de vectores ortonormales?"
+                },
+                back: {
+                    explanation: "Un conjunto de vectores es ortonormal si son ortogonales entre sí y cada uno tiene norma uno.",
+                    math: [
+                        "\\( \\|\\mathbf{u}_i\\| = 1 \\)",
+                        "\\( \\langle \\mathbf{u}_i, \\mathbf{u}_j \\rangle = 0 \\) para \( i \\neq j \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Producto Interno",
+                    content: "¿Qué es el producto interno entre dos vectores?"
+                },
+                back: {
+                    explanation: "El producto interno entre dos vectores \\( \\mathbf{u} \\) y \\( \\mathbf{v} \\) en \\( \\mathbb{R}^n \\) está definido por:",
+                    math: [
+                        "\\( \\langle \\mathbf{u}, \\mathbf{v} \\rangle = \\mathbf{u}^T \\mathbf{v} = \\sum_{i=1}^{n} u_i v_i \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Norma (Módulo)",
+                    content: "¿Cómo se calcula la norma de un vector?"
+                },
+                back: {
+                    explanation: "La norma de un vector \\( \\mathbf{v} \\) es su longitud, calculada a partir del producto interno:",
+                    math: [
+                        "\\( \\|\\mathbf{v}\\| = \\sqrt{\\langle \\mathbf{v}, \\mathbf{v} \\rangle} \\)",
+                        "En una métrica \\( G \\), se define como:",
+                        "\\( \\|\\mathbf{v}\\|_G = \\sqrt{ \\mathbf{v}^T G \\mathbf{v} } \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Transformación Lineal",
+                    content: "¿Qué es una transformación lineal?"
+                },
+                back: {
+                    explanation: "Una transformación lineal es una función entre espacios vectoriales que preserva las operaciones de suma de vectores y multiplicación por escalar.",
+                    math: [
+                        "\\( T(\\mathbf{u} + \\mathbf{v}) = T(\\mathbf{u}) + T(\\mathbf{v}) \\)",
+                        "\\( T(c\\mathbf{u}) = cT(\\mathbf{u}) \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Forma Cuadrática",
+                    content: "¿Qué es una forma cuadrática en dos variables?"
+                },
+                back: {
+                    explanation: "Una forma cuadrática en dos variables \\( x \\) y \\( y \\) es una expresión de la forma:",
+                    math: [
+                        "\\( f(x, y) = \\alpha x^2 + \\beta y^2 + \\gamma xy \\)",
+                        "donde \\( \\alpha \\), \\( \\beta \\) y \\( \\gamma \\) son coeficientes reales."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Matriz Simétrica",
+                    content: "¿Qué caracteriza a una matriz simétrica?"
+                },
+                back: {
+                    explanation: "Una matriz simétrica es una matriz cuadrada que es igual a su traspuesta.",
+                    math: [
+                        "\\( A = A^T \\)",
+                        "Donde \\( A^T_{ij} = A_{ji} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Valores Propios (Autovalores)",
+                    content: "¿Qué son los valores propios de una matriz?"
+                },
+                back: {
+                    explanation: "Los valores propios de una matriz \\( A \\) son los escalares \\( \\lambda \\) que satisfacen la ecuación:",
+                    math: [
+                        "\\( A \\mathbf{v} = \\lambda \\mathbf{v} \\)",
+                        "donde \\( \\mathbf{v} \\) es un vector no nulo llamado vector propio."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Vectores Propios (Autovectores)",
+                    content: "¿Qué es un vector propio?"
+                },
+                back: {
+                    explanation: "Un vector propio \\( \\mathbf{v} \\) asociado a un valor propio \\( \\lambda \\) es un vector no nulo que cumple:",
+                    math: [
+                        "\\( A \\mathbf{v} = \\lambda \\mathbf{v} \\)",
+                        "Mantiene su dirección bajo la transformación lineal representada por \\( A \\)."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Ecuación Característica",
+                    content: "¿Cómo se encuentra la ecuación característica de una matriz?"
+                },
+                back: {
+                    explanation: "Para una matriz cuadrada \\( A \\), la ecuación característica es:",
+                    math: [
+                        "\\( \\det(A - \\lambda I) = 0 \\)",
+                        "donde \\( I \\) es la matriz identidad y \\( \\lambda \\) representa los valores propios."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Diagonalización",
+                    content: "¿Qué significa diagonalizar una matriz?"
+                },
+                back: {
+                    explanation: "Diagonalizar una matriz \\( A \\) consiste en encontrar una matriz diagonal \\( D \\) y una matriz invertible \\( P \\) tal que:",
+                    math: [
+                        "\\( A = P D P^{-1} \\)",
+                        "donde las entradas de \\( D \\) son los valores propios de \\( A \\) y las columnas de \\( P \\) son los vectores propios correspondientes."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Matriz de Paso",
+                    content: "¿Qué es una matriz de paso?"
+                },
+                back: {
+                    explanation: "La matriz de paso \\( P \\) es una matriz cuyas columnas son los vectores de una nueva base respecto a la base canónica. Transforma las coordenadas de un vector de la base original a la nueva base.",
+                    math: [
+                        "\\( \\mathbf{v}' = P^{-1} \\mathbf{v} \\)",
+                        "Si \\( P \\) es ortogonal, entonces \\( P^{-1} = P^T \\)."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Sistema de Ecuaciones Lineales",
+                    content: "¿Qué es un sistema de ecuaciones lineales?"
+                },
+                back: {
+                    explanation: "Un sistema de ecuaciones lineales es un conjunto de ecuaciones que se resuelven simultáneamente, buscando los valores de las variables que satisfacen todas las ecuaciones del sistema.",
+                    math: [
+                        "\\( \\begin{cases} a_{11}x_1 + a_{12}x_2 + \\dots + a_{1n}x_n = b_1 \\\\ a_{21}x_1 + a_{22}x_2 + \\dots + a_{2n}x_n = b_2 \\\\ \\vdots \\\\ a_{m1}x_1 + a_{m2}x_2 + \\dots + a_{mn}x_n = b_m \\end{cases} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Sistema Homogéneo",
+                    content: "¿Qué es un sistema homogéneo?"
+                },
+                back: {
+                    explanation: "Un sistema homogéneo es un sistema de ecuaciones lineales donde todos los términos constantes son cero. Tiene siempre al menos la solución trivial \\( \\mathbf{x} = \\mathbf{0} \\).",
+                    math: [
+                        "\\( \\begin{cases} a_{11}x_1 + a_{12}x_2 + \\dots + a_{1n}x_n = 0 \\\\ a_{21}x_1 + a_{22}x_2 + \\dots + a_{2n}x_n = 0 \\\\ \\vdots \\\\ a_{m1}x_1 + a_{m2}x_2 + \\dots + a_{mn}x_n = 0 \\end{cases} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Producto Vectorial",
+                    content: "¿Qué es el producto vectorial en \\( \\mathbb{R}^3 \\)?"
+                },
+                back: {
+                    explanation: "El producto vectorial de dos vectores \\( \\mathbf{u} \\) y \\( \\mathbf{v} \\) en \\( \\mathbb{R}^3 \\) es un tercer vector perpendicular a ambos:",
+                    math: [
+                        "\\( \\mathbf{u} \\times \\mathbf{v} = \\begin{pmatrix} u_2 v_3 - u_3 v_2 \\\\ u_3 v_1 - u_1 v_3 \\\\ u_1 v_2 - u_2 v_1 \\end{pmatrix} \\)",
+                        "Utilizado para encontrar vectores normales a planos."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Ángulo entre Dos Vectores",
+                    content: "¿Cómo se calcula el ángulo entre dos vectores?"
+                },
+                back: {
+                    explanation: "El ángulo \\( \\theta \\) entre dos vectores \\( \\mathbf{u} \\) y \\( \\mathbf{v} \\) se calcula mediante:",
+                    math: [
+                        "\\( \\cos(\\theta) = \\frac{\\mathbf{u} \\cdot \\mathbf{v}}{\\|\\mathbf{u}\\| \\|\\mathbf{v}\\|} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Ángulo entre Dos Planos",
+                    content: "¿Cómo se define el ángulo entre dos planos?"
+                },
+                back: {
+                    explanation: "El ángulo \\( \\theta \\) entre dos planos está definido por el ángulo entre sus vectores normales \\( \\mathbf{n}_1 \\) y \\( \\mathbf{n}_2 \\):",
+                    math: [
+                        "\\( \\cos(\\theta) = \\frac{\\mathbf{n}_1 \\cdot \\mathbf{n}_2}{\\|\\mathbf{n}_1\\| \\|\\mathbf{n}_2\\|} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Recta en \\( \\mathbb{R}^n \\) (Parametrización)",
+                    content: "¿Cómo se parametriza una recta en \\( \\mathbb{R}^n \\)?"
+                },
+                back: {
+                    explanation: "Una recta en \\( \\mathbb{R}^n \\) puede ser expresada en forma paramétrica como:",
+                    math: [
+                        "\\( \\mathbf{r}(t) = \\mathbf{p} + t \\mathbf{d} \\)",
+                        "donde \\( \\mathbf{p} \\) es un punto en la recta, \\( \\mathbf{d} \\) es el vector director, y \\( t \\) es un parámetro real."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Rectas Skew",
+                    content: "¿Qué son las rectas skew en \\( \\mathbb{R}^4 \\)?"
+                },
+                back: {
+                    explanation: "En espacios de dimensión superior a 3, dos rectas skew son rectas que no son ni paralelas ni coplanarias, es decir, no se intersectan y no están contenidas en el mismo hiperplano.",
+                    math: []
+                }
+            },
+            {
+                front: {
+                    title: "Distancia Mínima entre Rectas Skew",
+                    content: "¿Cómo se calcula la distancia mínima entre dos rectas skew?"
+                },
+                back: {
+                    explanation: "La distancia mínima entre dos rectas skew es la longitud del segmento perpendicular que las une. Se calcula utilizando vectores directores y un vector conectador entre puntos de las rectas.",
+                    math: []
+                }
+            },
+            {
+                front: {
+                    title: "Producto Interno con Matriz Métrica \\( G \\)",
+                    content: "¿Cómo se define el producto interno con una matriz métrica \\( G \\)?"
+                },
+                back: {
+                    explanation: "Dado un producto interno definido por una matriz métrica \\( G \\), el producto interno entre dos vectores \\( \\mathbf{u} \\) y \\( \\mathbf{v} \\) se calcula como:",
+                    math: [
+                        "\\( \\langle \\mathbf{u}, \\mathbf{v} \\rangle_G = \\mathbf{u}^T G \\mathbf{v} \\)",
+                        "y la norma de un vector \\( \\mathbf{v} \\) es:",
+                        "\\( \\|\\mathbf{v}\\|_G = \\sqrt{ \\mathbf{v}^T G \\mathbf{v} } \\)",
+                        "Este producto interno generaliza el producto punto estándar y permite definir normas y ángulos en el espacio vectorial de manera flexible."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Diagonalización de Matrices",
+                    content: "¿Qué es la diagonalización de una matriz simétrica?"
+                },
+                back: {
+                    explanation: "La diagonalización de una matriz simétrica \\( G \\) implica encontrar una base ortonormal en \\( \\mathbb{R}^n \\) en la cual \\( G \\) se convierte en una matriz diagonal \\( D \\).",
+                    math: [
+                        "\\( G = P D P^{-1} \\)",
+                        "donde \\( P \\) es una matriz ortogonal formada por vectores propios de \\( G \\) y \\( D \\) es una matriz diagonal con los valores propios de \\( G \\)."
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Base Ortonormal en Diagonalización",
+                    content: "¿Por qué es importante que la base sea ortonormal al diagonalizar una matriz?"
+                },
+                back: {
+                    explanation: "Una base ortonormal simplifica los cálculos, ya que las componentes de los vectores en esta base son independientes y en ángulos rectos entre sí. Además, si \\( P \\) es ortogonal, entonces \\( P^{-1} = P^T \\), lo que facilita las transformaciones.",
+                    math: []
+                }
+            },
+            {
+                front: {
+                    title: "Producto Cruz en \\( \\mathbb{R}^3 \\)",
+                    content: "¿Para qué se utiliza el producto cruz en \\( \\mathbb{R}^3 \\)?"
+                },
+                back: {
+                    explanation: "El producto cruz de dos vectores en \\( \\mathbb{R}^3 \\) produce un tercer vector perpendicular a ambos, utilizado para encontrar vectores normales a planos.",
+                    math: [
+                        "\\( \\mathbf{u} \\times \\mathbf{v} = \\begin{pmatrix} u_2 v_3 - u_3 v_2 \\\\ u_3 v_1 - u_1 v_3 \\\\ u_1 v_2 - u_2 v_1 \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Ángulo entre Dos Vectores",
+                    content: "¿Cómo relaciona el producto punto con el ángulo entre vectores?"
+                },
+                back: {
+                    explanation: "El producto punto entre dos vectores está relacionado con el coseno del ángulo entre ellos:",
+                    math: [
+                        "\\( \\mathbf{u} \\cdot \\mathbf{v} = \\|\\mathbf{u}\\| \\|\\mathbf{v}\\| \\cos(\\theta) \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Sistema de Ecuaciones Homogéneo",
+                    content: "¿Qué solución siempre tiene un sistema homogéneo?"
+                },
+                back: {
+                    explanation: "Un sistema homogéneo siempre tiene al menos la solución trivial \\( \\mathbf{x} = \\mathbf{0} \\).",
+                    math: []
+                }
+            },
+            {
+                front: {
+                    title: "Sistema de Ecuaciones Consistente",
+                    content: "¿Qué significa que un sistema de ecuaciones sea consistente?"
+                },
+                back: {
+                    explanation: "Un sistema de ecuaciones es consistente si tiene al menos una solución.",
+                    math: []
+                }
+            },
+            {
+                front: {
+                    title: "Base Canónica en \\( \\mathbb{R}^3 \\)",
+                    content: "¿Cómo se define la base canónica en \\( \\mathbb{R}^3 \\)?"
+                },
+                back: {
+                    explanation: "La base canónica en \\( \\mathbb{R}^3 \\) está formada por los vectores unitarios que tienen un 1 en una única posición y 0 en las demás.",
+                    math: [
+                        "\\( \\mathbf{e}_1 = \\begin{pmatrix} 1 \\\\ 0 \\\\ 0 \\end{pmatrix}, \\mathbf{e}_2 = \\begin{pmatrix} 0 \\\\ 1 \\\\ 0 \\end{pmatrix}, \\mathbf{e}_3 = \\begin{pmatrix} 0 \\\\ 0 \\\\ 1 \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Matriz Identidad",
+                    content: "¿Qué es la matriz identidad?"
+                },
+                back: {
+                    explanation: "La matriz identidad es una matriz diagonal con unos en la diagonal principal y ceros en el resto.",
+                    math: [
+                        "\\( I = \\begin{pmatrix} 1 & 0 & \\dots & 0 \\\\ 0 & 1 & \\dots & 0 \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ 0 & 0 & \\dots & 1 \\end{pmatrix} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Ortogonalidad de una Matriz",
+                    content: "¿Qué significa que una matriz sea ortogonal?"
+                },
+                back: {
+                    explanation: "Una matriz es ortogonal si sus columnas (o filas) son vectores ortonormales. Matemáticamente, \\( P^T = P^{-1} \\).",
+                    math: [
+                        "\\( P^T P = I \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Producto Interno Positivo Definido",
+                    content: "¿Qué significa que un producto interno sea positivo definido?"
+                },
+                back: {
+                    explanation: "Un producto interno es positivo definido si para todo vector no nulo \\( \\mathbf{v} \\), se cumple \\( \\langle \\mathbf{v}, \\mathbf{v} \\rangle > 0 \\).",
+                    math: [
+                        "\\( \\langle \\mathbf{v}, \\mathbf{v} \\rangle > 0 \\quad \\forall \\mathbf{v} \\neq \\mathbf{0} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Transformación Lineal Ortogonal",
+                    content: "¿Qué es una transformación lineal ortogonal?"
+                },
+                back: {
+                    explanation: "Una transformación lineal ortogonal es una transformación lineal representada por una matriz ortogonal. Preserva las normas y los ángulos entre vectores.",
+                    math: [
+                        "\\( T(\\mathbf{u}) = P \\mathbf{u} \\)",
+                        "Donde \\( P \\) es una matriz ortogonal, es decir, \\( P^T = P^{-1} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Transformación Lineal Invertible",
+                    content: "¿Qué es una transformación lineal invertible?"
+                },
+                back: {
+                    explanation: "Una transformación lineal es invertible si existe otra transformación lineal que revierte la acción de la primera. Matemáticamente, si \\( T \\) es invertible, entonces \\( T^{-1} \\) existe y cumple:",
+                    math: [
+                        "\\( T^{-1}(T(\\mathbf{v})) = \\mathbf{v} \\)",
+                        "\\( T(T^{-1}(\\mathbf{v})) = \\mathbf{v} \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Base Linealmente Independiente",
+                    content: "¿Qué significa que un conjunto de vectores sea linealmente independiente?"
+                },
+                back: {
+                    explanation: "Un conjunto de vectores es linealmente independiente si ninguna combinación lineal no trivial de ellos es igual al vector cero.",
+                    math: [
+                        "\\( c_1\\mathbf{v}_1 + c_2\\mathbf{v}_2 + \\dots + c_n\\mathbf{v}_n = \\mathbf{0} \\)",
+                        "Sólo tiene solución trivial \\( c_1 = c_2 = \\dots = c_n = 0 \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Dimensión de un Espacio Vectorial",
+                    content: "¿Qué es la dimensión de un espacio vectorial?"
+                },
+                back: {
+                    explanation: "La dimensión de un espacio vectorial es el número de vectores en una base del espacio. Representa el número de grados de libertad.",
+                    math: [
+                        "\\( \\dim(\\mathbb{R}^n) = n \\)"
+                    ]
+                }
+            },
+            {
+                front: {
+                    title: "Subespacio Vectorial",
+                    content: "¿Qué es un subespacio vectorial?"
+                },
+                back: {
+                    explanation: "Un subespacio vectorial es un conjunto de vectores en \\( \\mathbb{R}^n \\) que es cerrado bajo la suma de vectores y la multiplicación por escalar.",
+                    math: []
+                }
+            }
+        ];
+
+        let currentCard = 0;
+        let isFlipped = false;
+        let timer;
+        let timeLeft = 15;
+        let canFlip = false;
+
+        function renderLatexContent(element) {
+            renderMathInElement(element, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "\\[", right: "\\]", display: true},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$", right: "$", display: false}
+                ],
+                throwOnError: false
+            });
+        }
+
+        function startFlashcards() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('flashcardContainer').style.display = 'block';
+            document.getElementById('progressText').textContent = `Tarjeta 1 de ${flashcards.length}`;
+            document.getElementById('progressFill').style.width = '0%';
+            displayCard(currentCard);
+            startTimer();
+        }
+
+        function startTimer() {
+            timeLeft = 15;
+            canFlip = false;
+            document.getElementById('timer').textContent = `Tiempo restante: ${timeLeft}s`;
+            document.getElementById('flashcard').style.cursor = 'not-allowed';
+            document.getElementById('prevButton').disabled = currentCard === 0;
+            document.getElementById('nextButton').disabled = true;
+
+            if (timer) clearInterval(timer);
+
+            timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    document.getElementById('timer').textContent = `Tiempo restante: ${timeLeft}s`;
+                } else {
+                    clearInterval(timer);
+                    canFlip = true;
+                    document.getElementById('flashcard').style.cursor = 'pointer';
+                    document.getElementById('timer').textContent = `¡Puedes girar la tarjeta!`;
+                    document.getElementById('nextButton').disabled = false;
+                }
+            }, 1000);
+        }
+
+        function displayCard(index) {
+            const card = flashcards[index];
+            const front = document.querySelector('.flashcard-front');
+            const back = document.querySelector('.flashcard-back');
+
+            front.innerHTML = `
+                <h2>${card.front.title}</h2>
+                <p>${card.front.content}</p>
+            `;
+            back.innerHTML = `
+                <h2>Explicación</h2>
+                <div class="latex-content">
+                    ${card.back.explanation}
+                </div>
+                ${card.back.math && card.back.math.length > 0 ? card.back.math.map(item => `<div class="latex-content">${item}</div>`).join('') : ''}
+            `;
+
+            renderLatexContent(front);
+            renderLatexContent(back);
+
+            // Update progress
+            document.getElementById('progressText').textContent = `Tarjeta ${index + 1} de ${flashcards.length}`;
+            const progressPercentage = ((index) / (flashcards.length - 1)) * 100;
+            document.getElementById('progressFill').style.width = `${progressPercentage}%`;
+
+            // Reset flip state
+            const flashcard = document.getElementById('flashcard');
+            flashcard.classList.remove('flipped');
+            isFlipped = false;
+
+            // Update motivation message
+            document.getElementById('motivation').textContent = "";
+        }
+
+        function flipCard() {
+            if (canFlip) {
+                const flashcard = document.getElementById('flashcard');
+                flashcard.classList.toggle('flipped');
+                isFlipped = !isFlipped;
+
+                if (isFlipped) {
+                    document.getElementById('motivation').textContent = "¡Excelente! Continúa reforzando tus conocimientos.";
+                } else {
+                    document.getElementById('motivation').textContent = "";
+                }
+            }
+        }
+
+        function nextCard() {
+            if (currentCard < flashcards.length - 1) {
+                currentCard++;
+                displayCard(currentCard);
+                startTimer();
+            }
+        }
+
+        function previousCard() {
+            if (currentCard > 0) {
+                currentCard--;
+                displayCard(currentCard);
+                startTimer();
+            }
+        }
+
+        // Event listener for flipping the card
+        document.getElementById('flashcard').addEventListener('click', flipCard);
+
+        // Initial setup for total questions
+        document.addEventListener("DOMContentLoaded", function() {
+            renderLatexContent(document.body);
+        });
+    </script>
+</body>
+</html>
